@@ -6,10 +6,18 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import torch.nn as nn
+from flwr.common.logger import log
+from logging import INFO
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
-from constants import ARTIFACTS_DIR, BATCH_SIZE, FEATURES, FL_DIR, OUTPUT_DATASET_DIR
+from constants import (
+    ARTIFACTS_DIR,
+    BATCH_SIZE,
+    NUM_CLASSES,
+    FEATURES,
+    OUTPUT_DATASET_DIR,
+)
 from federated_learning.dataset import TrustDataset
 from federated_learning.model import BaseModel
 
@@ -24,6 +32,7 @@ class PyTorchClient(fl.client.NumPyClient):
         Initialize the PyTorchClient
         """
         self.client_id = client_id
+        self.params = params
         self.data_file = f"{OUTPUT_DATASET_DIR}/node_{client_id}_train.csv"
         self.output_dir = f"{ARTIFACTS_DIR}/client_{client_id}"
         os.makedirs(self.output_dir, exist_ok=True)
@@ -32,11 +41,14 @@ class PyTorchClient(fl.client.NumPyClient):
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
         self.model = BaseModel().to(self.device)
+        self.round = 0
+        self.optimizer = None
+        self.scheduler = None
+        self.criterion = nn.CrossEntropyLoss()
+
         self.trainloader = None
         self.valloader = None
         self.scaler = None
-        self.round = 0
-        self.params = params
 
     def get_parameters(self, config):
         """Return model parameters as a list of NumPy arrays"""
@@ -64,9 +76,135 @@ class PyTorchClient(fl.client.NumPyClient):
         val_dataset = TrustDataset(X_val, y_val)
         self.valloader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
+    def fit(self, parameters, config):
+        """
+        Train the model on the local dataset.
+        """
+        self.model.set_weights(parameters)
+        self.round += 1
+
+        if self.trainloader is None or self.valloader is None:
+            self.load_data()
+
+        num_classes = NUM_CLASSES
+
+        self.model.train()
+        self.train_accuracies, self.train_losses = [], []
+        self.val_accuracies, self.val_losses = [], []
+
+        for epoch in range(self.params["epochs"]):
+            # Training
+            correct, total, running_loss = 0, 0, 0.0
+            for features, labels in self.trainloader:
+                features = features.float().to(self.device)
+                labels = labels.long().to(self.device)
+
+                self.optimizer.zero_grad()
+                outputs = self.model(features)
+                loss = self.criterion(outputs, labels)
+                loss_for_backward = loss.mean() if loss.ndim > 0 else loss
+                loss_for_backward.backward()
+                self.optimizer.step()
+
+                with torch.no_grad():
+                    preds = torch.argmax(outputs, dim=1)
+                    correct += (preds == labels).sum().item()
+                    total += labels.size(0)
+                    running_loss += (
+                        loss.sum().item()
+                        if loss.ndim > 0
+                        else loss.item() * labels.size(0)
+                    )
+
+            if self.scheduler:
+                self.scheduler.step()
+
+            train_accuracy = correct / total if total > 0 else 0.0
+            train_loss = running_loss / total if total > 0 else 0.0
+            self.train_accuracies.append(train_accuracy)
+            self.train_losses.append(train_loss)
+
+            # Validation
+            self.model.eval()
+            val_correct, val_total, val_running_loss = 0, 0, 0.0
+            class_val_correct = [0] * num_classes
+            class_val_total = [0] * num_classes
+
+            with torch.no_grad():
+                for features, labels in self.valloader:
+                    features = features.float().to(self.device)
+                    labels = labels.long().to(self.device)
+                    outputs = self.model(features)
+                    losses = self.criterion(outputs, labels)
+                    preds = torch.argmax(outputs, dim=1)
+
+                    val_correct += (preds == labels).sum().item()
+                    val_total += labels.size(0)
+                    val_running_loss += (
+                        losses.sum().item()
+                        if losses.ndim > 0
+                        else losses.item() * labels.size(0)
+                    )
+
+                    for i in range(labels.size(0)):
+                        label = labels[i].item()
+                        class_val_total[label] += 1
+                        if preds[i].item() == label:
+                            class_val_correct[label] += 1
+
+            val_accuracy = val_correct / val_total if val_total > 0 else 0.0
+            val_loss = val_running_loss / val_total if val_total > 0 else 0.0
+            self.val_accuracies.append(val_accuracy)
+            self.val_losses.append(val_loss)
+            self.model.train()
+
+            last_class_correct = class_val_correct
+            last_class_total = class_val_total
+
+        avg_val_accuracy = (
+            sum(self.val_accuracies) / len(self.val_accuracies)
+            if self.val_accuracies
+            else 0.0
+        )
+        avg_train_accuracy = (
+            sum(self.train_accuracies) / len(self.train_accuracies)
+            if self.train_accuracies
+            else 0.0
+        )
+
+        class_metrics = {}
+        for cls in range(num_classes):
+            total = last_class_total[cls]
+            correct = last_class_correct[cls]
+            class_metrics[f"class_{cls}_accuracy"] = (
+                correct / total if total > 0 else 0.0
+            )
+
+        self.plot_graphs()
+
+        log(INFO, f"Client {self.client_id} - Round {self.round} results:")
+        log(
+            INFO,
+            {
+                "train_accuracy": avg_train_accuracy,
+                "val_accuracy": avg_val_accuracy,
+                **class_metrics,
+            },
+        )
+
+        return (
+            self.model.get_weights(),
+            len(self.trainloader.dataset),
+            {
+                "train_accuracy": avg_train_accuracy,
+                "val_accuracy": avg_val_accuracy,
+                **class_metrics,
+            },
+        )
+
     def evaluate(self, parameters, config):
         """
-        Evaluate model on validation set
+        Evaluate model on validation set for Flower server
         """
         self.model.set_weights(parameters)
         self.model.eval()

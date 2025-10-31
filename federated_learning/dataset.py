@@ -11,8 +11,8 @@ class TrustDataset(Dataset):
     PyTorch Dataset for loading the trust data.
     """
 
-    def __init__(self, data, labels):
-        self.scaler = joblib.load(SCALER_PATH)
+    def __init__(self, data, labels, scaler_path=SCALER_PATH):
+        self.scaler = joblib.load(scaler_path)
         self.data = self.scaler.transform(pd.DataFrame(data, columns=FEATURES))
 
         self.features = torch.tensor(self.data, dtype=torch.float32)

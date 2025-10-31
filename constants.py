@@ -1,5 +1,5 @@
 SERVER_SOCKET = "127.0.0.1:6000"
-NUM_ROUNDS = 6
+NUM_ROUNDS = 5
 CLIENTS_REQUIRED = 3
 
 COLUMNS = ["RSSI", "LQI", "BatteryLevel", "BatteryDiff", "AntennaAngle"]
@@ -15,3 +15,4 @@ SCALER_PATH = "artifacts/global_scaler.pkl"
 
 BATCH_SIZE = 32
 WINDOW_SIZE = 600
+NUM_CLASSES = 4

@@ -6,6 +6,8 @@ from flwr.common import parameters_to_ndarrays
 from flwr.common.logger import log
 from logging import INFO
 
+from federated_learning.model import BaseModel
+
 
 class FedAvgWithModelSaving(fl.server.strategy.FedAvg):
     """
@@ -20,10 +22,11 @@ class FedAvgWithModelSaving(fl.server.strategy.FedAvg):
         super().__init__(*args, **kwargs)
 
     def save_global_model(self, server_round: int, parameters):
-        """Save the parameters to disk."""
-
         ndarrays = parameters_to_ndarrays(parameters)
-        data = {"global_parameters": ndarrays}
+        model = BaseModel()
+        keys = list(model.state_dict().keys())
+
+        data = {"global_parameters": ndarrays, "param_keys": keys}
         filename = str(self.save_path / f"parameters_round_{server_round}.pkl")
         with open(filename, "wb") as h:
             pickle.dump(data, h, protocol=pickle.HIGHEST_PROTOCOL)

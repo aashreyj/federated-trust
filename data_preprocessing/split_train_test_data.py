@@ -10,7 +10,7 @@ from constants import (
     FEATURES,
     PROCESSED_DATA_DIR,
     OUTPUT_DATASET_DIR,
-    FL_DIR,
+    SCALER_PATH,
 )
 
 
@@ -51,7 +51,7 @@ def scale_datasets():
     global_scaler = MinMaxScaler()
     global_scaler.fit(all_data)
 
-    joblib.dump(global_scaler, f"{FL_DIR}/global_scaler.pkl")
+    joblib.dump(global_scaler, SCALER_PATH)
 
 
 perform_test_train_split()
