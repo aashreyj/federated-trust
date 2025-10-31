@@ -1,19 +1,20 @@
 import os
+
 import pandas as pd
 
-DATA_DIR = "data/raw"
-COLUMNS = ["RSSI", "LQI", "BatteryLevel", "BatteryDiff", "AntennaAngle"]
+from constants import COLUMNS, RAW_DATA_DIR
 
-for filename in os.listdir(DATA_DIR):
+
+for filename in os.listdir(RAW_DATA_DIR):
     print("Processing file:", filename)
     if not filename.startswith("DataCap"):
         continue
 
     # set input and output file paths
-    file_path = os.path.join(DATA_DIR, filename)
+    file_path = os.path.join(RAW_DATA_DIR, filename)
     split_filename = filename.split("-")
     antenna_angle, distance = split_filename[-2], split_filename[-1].split(".")[0]
-    output_file_path = os.path.join(DATA_DIR, f"node_{distance}_data_raw.csv")
+    output_file_path = os.path.join(RAW_DATA_DIR, f"node_{distance}_data_raw.csv")
     does_output_file_exist = os.path.exists(output_file_path)
 
     df = pd.read_csv(file_path, header=None)
