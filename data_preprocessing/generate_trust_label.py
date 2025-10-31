@@ -1,14 +1,10 @@
+from collections import deque
 import os
 
 import numpy as np
 import pandas as pd
-from collections import deque
 
-RAW_DATA_DIR = "data/raw"
-OUTPUT_DIR = "data/preprocessed"
-DISTANCES = ["1m", "2m", "3m"]
-FEATURES = ["RSSI", "LQI", "BatteryLevel", "BatteryDiff"]
-WINDOW_SIZE = 600
+from constants import RAW_DATA_DIR, PROCESSED_DATA_DIR, FEATURES, DISTANCES, WINDOW_SIZE
 
 
 class TrustModel:
@@ -109,7 +105,7 @@ def generate_trust_labels(df_device, features, model_instance):
 
 for distance in DISTANCES:
     input_file_path = os.path.join(RAW_DATA_DIR, f"node_{distance}_data_raw.csv")
-    output_file_path = os.path.join(OUTPUT_DIR, f"node_{distance}_data.csv")
+    output_file_path = os.path.join(PROCESSED_DATA_DIR, f"node_{distance}_data.csv")
 
     print("Processing file:", input_file_path)
     does_output_file_exist = os.path.exists(output_file_path)
