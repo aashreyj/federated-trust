@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from flwr.common.logger import log
 from logging import INFO
+from pprint import pprint
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
@@ -17,6 +18,7 @@ from constants import (
     NUM_CLASSES,
     FEATURES,
     OUTPUT_DATASET_DIR,
+    CLASS_WEIGHTS,
 )
 from federated_learning.dataset import TrustDataset
 from federated_learning.model import BaseModel
@@ -44,7 +46,9 @@ class PyTorchClient(fl.client.NumPyClient):
         self.round = 0
         self.optimizer = None
         self.scheduler = None
-        self.criterion = nn.CrossEntropyLoss()
+
+        class_weights = torch.tensor(CLASS_WEIGHTS, dtype=torch.float32).to(self.device)
+        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
 
         self.trainloader = None
         self.valloader = None
@@ -80,7 +84,6 @@ class PyTorchClient(fl.client.NumPyClient):
         """
         Train the model on the local dataset.
         """
-        self.model.set_weights(parameters)
         self.round += 1
 
         if self.trainloader is None or self.valloader is None:
@@ -104,6 +107,9 @@ class PyTorchClient(fl.client.NumPyClient):
                 loss = self.criterion(outputs, labels)
                 loss_for_backward = loss.mean() if loss.ndim > 0 else loss
                 loss_for_backward.backward()
+
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
                 self.optimizer.step()
 
                 with torch.no_grad():
@@ -176,18 +182,19 @@ class PyTorchClient(fl.client.NumPyClient):
         for cls in range(num_classes):
             total = last_class_total[cls]
             correct = last_class_correct[cls]
-            class_metrics[f"class_{cls}_accuracy"] = (
-                correct / total if total > 0 else 0.0
+            class_metrics[f"class_{cls}_accuracy"] = round(
+                correct / total if total > 0 else 0.0, 4
             )
 
         self.plot_graphs()
 
         log(INFO, f"Client {self.client_id} - Round {self.round} results:")
-        log(
-            INFO,
+        pprint(
             {
                 "train_accuracy": avg_train_accuracy,
                 "val_accuracy": avg_val_accuracy,
+                "train_loss": self.train_losses[-1],
+                "val_loss": self.val_losses[-1],
                 **class_metrics,
             },
         )
@@ -197,8 +204,7 @@ class PyTorchClient(fl.client.NumPyClient):
             len(self.trainloader.dataset),
             {
                 "train_accuracy": avg_train_accuracy,
-                "val_accuracy": avg_val_accuracy,
-                **class_metrics,
+                "val_accuracy": avg_val_accuracy
             },
         )
 

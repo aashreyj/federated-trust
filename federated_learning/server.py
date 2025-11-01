@@ -42,27 +42,12 @@ def aggregate_fit_metrics(metrics):
         / total_examples
     )
 
-    class_metrics = {}
-    for num_examples, m in metrics:
-        for k, v in m.items():
-            if "class_" in k:
-                if k not in class_metrics:
-                    class_metrics[k] = []
-                class_metrics[k].append((num_examples, v))
-
-    aggregated_class_metrics = {}
-    for k, values in class_metrics.items():
-        agg = sum([n * v for n, v in values]) / sum([n for n, _ in values])
-        aggregated_class_metrics[k] = agg
-        log(INFO, f"{k} (weighted): {agg:.4f}")
-
     log(INFO, f"Round accuracy (weighted): {weighted_train_accuracy:.4f}")
     log(INFO, f"Round validation accuracy (weighted): {weighted_val_accuracy:.4f}")
 
     return {
         "train_accuracy": weighted_train_accuracy,
         "val_accuracy": weighted_val_accuracy,
-        **aggregated_class_metrics,
     }
 
 
@@ -108,9 +93,15 @@ def evaluate_model(server_round, parameters, config):
         acc = class_correct[cls] / class_total[cls] if class_total[cls] > 0 else 0.0
         metrics[f"class_{cls}_accuracy"] = acc
 
-    log(INFO, f"Server-side evaluation after round {server_round}: loss={avg_loss:.4f}, accuracy={test_accuracy:.4f}")
+    log(
+        INFO,
+        f"Server-side evaluation after round {server_round}: loss={avg_loss:.4f}, accuracy={test_accuracy:.4f}",
+    )
     for cls in range(num_classes):
-        log(INFO, f"Class {cls} accuracy after round {server_round}: {metrics[f'class_{cls}_accuracy']:.4f}")
+        log(
+            INFO,
+            f"Class {cls} accuracy after round {server_round}: {metrics[f'class_{cls}_accuracy']:.4f}",
+        )
 
     return avg_loss, metrics
 

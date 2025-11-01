@@ -1,12 +1,12 @@
 import os
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from constants import (
-    DISTANCES,
     FEATURES,
     PROCESSED_DATA_DIR,
     OUTPUT_DATASET_DIR,
@@ -14,46 +14,40 @@ from constants import (
 )
 
 
-def perform_test_train_split():
-    """
-    Splits the preprocessed data into training and testing sets for each distance
-    """
-    global_test_list = []
-
-    for idx, distance in enumerate(DISTANCES):
-        file_path = os.path.join(PROCESSED_DATA_DIR, f"node_{distance}_data.csv")
-        df = pd.read_csv(file_path)
-
-        train_df, test_df = train_test_split(
-            df, test_size=0.3, stratify=df["Class"], random_state=42
-        )
-        train_file_path = os.path.join(OUTPUT_DATASET_DIR, f"node_{idx}_train.csv")
-        train_df.to_csv(train_file_path, index=False)
-        global_test_list.append(test_df)
-
-    global_test_df = pd.concat(global_test_list)
-    global_test_df.to_csv(
-        os.path.join(OUTPUT_DATASET_DIR, "global_test.csv"), index=False
-    )
-
-
-def scale_datasets():
+def split_and_scale_datasets():
     """
     Scales the features of the datasets using Min-Max scaling
     """
 
-    df_1m = pd.read_csv(f"{OUTPUT_DATASET_DIR}/node_0_train.csv")
-    df_2m = pd.read_csv(f"{OUTPUT_DATASET_DIR}/node_1_train.csv")
-    df_3m = pd.read_csv(f"{OUTPUT_DATASET_DIR}/node_2_train.csv")
+    df_1m = pd.read_csv(f"{PROCESSED_DATA_DIR}/node_1m_data.csv")
+    df_2m = pd.read_csv(f"{PROCESSED_DATA_DIR}/node_2m_data.csv")
+    df_3m = pd.read_csv(f"{PROCESSED_DATA_DIR}/node_3m_data.csv")
 
-    all_data = pd.concat([df_1m[FEATURES], df_2m[FEATURES], df_3m[FEATURES]])
+    class0_mask = df_2m['Class'] == 0
+    class0_indices = df_2m[class0_mask].sample(frac=0.5, random_state=42).index
+    other_indices = df_2m[~class0_mask].index
+    df_2m = df_2m.loc[class0_indices.union(other_indices)].reset_index(drop=True)
+
+    all_data = pd.concat([df for df in [df_1m, df_2m, df_3m]])
+    all_train, all_test = train_test_split(
+        all_data, test_size=0.3, random_state=42, stratify=all_data["Class"]
+    )
 
     global_scaler = MinMaxScaler()
-    global_scaler.fit(all_data)
+    global_scaler.fit(all_train[FEATURES])
 
     joblib.dump(global_scaler, SCALER_PATH)
 
+    train_splits = np.array_split(all_train, 3)
+    for i, split_df in enumerate(train_splits):
+        split_df.to_csv(
+            os.path.join(OUTPUT_DATASET_DIR, f"node_{i}_train.csv"), index=False
+        )
 
-perform_test_train_split()
-scale_datasets()
+    all_test.to_csv(
+        os.path.join(OUTPUT_DATASET_DIR, "global_test.csv"), index=False
+    )
+
+
+split_and_scale_datasets()
 print("Train-test split and scaling completed.")

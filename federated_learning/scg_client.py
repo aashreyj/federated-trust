@@ -1,28 +1,18 @@
-import sys
-
 import flwr as fl
 import torch
 
 from constants import SERVER_SOCKET
 from federated_learning.base_client import PyTorchClient
 
-CLIENT_ID = sys.argv[1]
+
+
 PARAMS = {
-    "lr": 0.001,
-    "epochs": 40,
+    "lr": 0.0005,
+    "epochs": 50,
     "momentum": 0.8,
-    "step_size": 10,
+    "step_size": 15,
     "gamma": 0.9,
 }
-
-
-# PARAMS = {
-#     "lr": 0.0005,
-#     "epochs": 50,
-#     "momentum": 0.8,
-#     "step_size": 15,
-#     "gamma": 0.9,
-# }
 
 
 class SCG_Client(PyTorchClient):
@@ -35,6 +25,7 @@ class SCG_Client(PyTorchClient):
         Plots and saves accuracy and loss curves at the end of training.
         """
 
+        self.model.set_weights(parameters)
         self.optimizer = torch.optim.SGD(
             self.model.parameters(),
             lr=self.params["lr"],
@@ -50,5 +41,5 @@ class SCG_Client(PyTorchClient):
         return super().fit(parameters, config)
 
 
-scg_client = SCG_Client(client_id=CLIENT_ID, params=PARAMS).to_client()
+scg_client = SCG_Client(client_id=2, params=PARAMS).to_client()
 fl.client.start_client(server_address=SERVER_SOCKET, client=scg_client)

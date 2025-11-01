@@ -1,10 +1,10 @@
 from pathlib import Path
 import pickle
+from logging import INFO
 
 import flwr as fl
-from flwr.common import parameters_to_ndarrays
+from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters
 from flwr.common.logger import log
-from logging import INFO
 
 from federated_learning.model import BaseModel
 
@@ -20,6 +20,15 @@ class FedAvgWithModelSaving(fl.server.strategy.FedAvg):
         self.save_path = Path(save_path)
         self.save_path.mkdir(exist_ok=True, parents=True)
         super().__init__(*args, **kwargs)
+
+    def initialize_parameters(self, client_manager):
+        """
+        Initialize global model parameters
+        """
+        model = BaseModel()
+        weights = model.get_weights()
+        parameters = ndarrays_to_parameters(weights)
+        return parameters
 
     def save_global_model(self, server_round: int, parameters):
         ndarrays = parameters_to_ndarrays(parameters)
