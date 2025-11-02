@@ -9,9 +9,9 @@ from federated_learning.base_client import PyTorchClient
 PARAMS = {
     "lr": 0.001,
     "epochs": 40,
-    "momentum": 0.8,
-    "step_size": 15,
-    "gamma": 0.9,
+    "momentum": 0.9,
+    "step_size": 20,
+    "gamma": 0.8,
 }
 
 
