@@ -18,7 +18,6 @@ from constants import (
     NUM_CLASSES,
     FEATURES,
     OUTPUT_DATASET_DIR,
-    CLASS_WEIGHTS,
 )
 from federated_learning.dataset import TrustDataset
 from federated_learning.model import BaseModel
@@ -47,8 +46,7 @@ class PyTorchClient(fl.client.NumPyClient):
         self.optimizer = None
         self.scheduler = None
 
-        class_weights = torch.tensor(CLASS_WEIGHTS, dtype=torch.float32).to(self.device)
-        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.criterion = nn.CrossEntropyLoss()
 
         self.trainloader = None
         self.valloader = None

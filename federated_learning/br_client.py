@@ -6,9 +6,9 @@ from federated_learning.base_client import PyTorchClient
 
 
 PARAMS = {
-    "lr": 0.0005,
+    "lr": 0.001,
     "weight_decay": 1e-4,
-    "epochs": 50,
+    "epochs": 40,
 }
 
 

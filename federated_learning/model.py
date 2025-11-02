@@ -6,7 +6,7 @@ import torch.nn as nn
 
 
 class BaseModel(nn.Module):
-    def __init__(self, input_dim=4, hidden_dim=32, output_dim=4):
+    def __init__(self, input_dim=4, hidden_dim=64, output_dim=4):
         """
         Initialize the BaseModel Architecture
         """

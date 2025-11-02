@@ -24,7 +24,7 @@ def split_and_scale_datasets():
     df_3m = pd.read_csv(f"{PROCESSED_DATA_DIR}/node_3m_data.csv")
 
     class0_mask = df_2m['Class'] == 0
-    class0_indices = df_2m[class0_mask].sample(frac=0.5, random_state=42).index
+    class0_indices = df_2m[class0_mask].sample(frac=0.7, random_state=42).index
     other_indices = df_2m[~class0_mask].index
     df_2m = df_2m.loc[class0_indices.union(other_indices)].reset_index(drop=True)
 
