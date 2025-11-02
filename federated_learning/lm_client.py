@@ -5,10 +5,9 @@ from constants import SERVER_SOCKET
 from federated_learning.base_client import PyTorchClient
 
 
-
 PARAMS = {
     "lr": 0.001,
-    "epochs": 40,
+    "epochs": 20,
 }
 
 

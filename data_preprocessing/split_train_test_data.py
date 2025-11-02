@@ -23,7 +23,7 @@ def split_and_scale_datasets():
     df_2m = pd.read_csv(f"{PROCESSED_DATA_DIR}/node_2m_data.csv")
     df_3m = pd.read_csv(f"{PROCESSED_DATA_DIR}/node_3m_data.csv")
 
-    class0_mask = df_2m['Class'] == 0
+    class0_mask = df_2m["Class"] == 0
     class0_indices = df_2m[class0_mask].sample(frac=0.7, random_state=42).index
     other_indices = df_2m[~class0_mask].index
     df_2m = df_2m.loc[class0_indices.union(other_indices)].reset_index(drop=True)
@@ -44,9 +44,7 @@ def split_and_scale_datasets():
             os.path.join(OUTPUT_DATASET_DIR, f"node_{i}_train.csv"), index=False
         )
 
-    all_test.to_csv(
-        os.path.join(OUTPUT_DATASET_DIR, "global_test.csv"), index=False
-    )
+    all_test.to_csv(os.path.join(OUTPUT_DATASET_DIR, "global_test.csv"), index=False)
 
 
 split_and_scale_datasets()

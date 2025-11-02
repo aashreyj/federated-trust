@@ -200,10 +200,7 @@ class PyTorchClient(fl.client.NumPyClient):
         return (
             self.model.get_weights(),
             len(self.trainloader.dataset),
-            {
-                "train_accuracy": avg_train_accuracy,
-                "val_accuracy": avg_val_accuracy
-            },
+            {"train_accuracy": avg_train_accuracy, "val_accuracy": avg_val_accuracy},
         )
 
     def evaluate(self, parameters, config):
