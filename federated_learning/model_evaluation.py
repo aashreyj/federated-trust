@@ -149,20 +149,63 @@ def evaluate_checkpoint(checkpoint_path, output_dir=None):
     # Plot confusion matrix
     if output_dir:
         plt.figure(figsize=(10, 8))
-        sns.heatmap(
+        ax = sns.heatmap(
             cm,
             annot=True,
             fmt="d",
             cmap="Blues",
+            cbar=False,
             xticklabels=[f"Class {i}" for i in range(num_classes)],
             yticklabels=[f"Class {i}" for i in range(num_classes)],
         )
-        plt.title("Confusion Matrix")
-        plt.ylabel("True Label")
-        plt.xlabel("Predicted Label")
+        plt.title("Confusion Matrix", fontweight="bold")
+        plt.ylabel("True Label", fontweight="bold", labelpad=14)
+        plt.xlabel("Predicted Label", fontweight="bold", labelpad=14)
+
+        plt.xticks(fontsize=10, fontweight="bold")
+        plt.yticks(fontsize=10, fontweight="bold")
+        ax.tick_params(axis="x", pad=12)
+        ax.tick_params(axis="y", pad=12)
+
         output_path = f"{output_dir}/confusion_matrix.png"
         plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"\nConfusion matrix saved to: {output_path}")
+        plt.close()
+
+        # ---- New: grouped bar chart for metrics by class ----
+        metrics = {
+            "Accuracy": class_accuracy,
+            "Precision": precision_per_class.tolist(),
+            "Recall": recall_per_class.tolist(),
+            "F1 Score": f1_per_class.tolist(),
+            "F0.5 Score": f05_per_class.tolist(),
+        }
+        metric_names = list(metrics.keys())
+        n_metrics = len(metric_names)
+        class_labels = [f"Class {i}" for i in range(num_classes)]
+
+        bar_width = 0.15
+        x = np.arange(n_metrics)
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for i, cls in enumerate(class_labels):
+            vals = [metrics[m][i] for m in metric_names]
+            offset = (i - (num_classes - 1) / 2) * bar_width
+            ax.bar(x + offset, vals, width=bar_width, label=cls)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(metric_names, fontweight="bold")
+        ax.set_ylabel("Score", fontweight="bold")
+        ax.set_ylim(0, 1)
+        ax.yaxis.grid(True, linestyle="--", alpha=0.4)
+        ax.tick_params(axis="y", labelsize=10)
+        ax.tick_params(axis="x", labelsize=11)
+        ax.legend(title="Class", frameon=False, bbox_to_anchor=(1.05, 0.5), loc="center left", borderaxespad=0.0)
+        plt.tight_layout(rect=(0, 0, 0.85, 1.0))
+
+        metrics_output_path = f"{output_dir}/metrics_by_class.png"
+        fig.savefig(metrics_output_path, dpi=300, bbox_inches="tight")
+        print(f"Metrics bar chart saved to: {metrics_output_path}")
         plt.close()
 
 
