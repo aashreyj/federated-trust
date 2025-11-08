@@ -136,8 +136,7 @@ def evaluate_checkpoint(checkpoint_path, output_dir=None):
     print("\nConfusion Matrix:")
     print(cm)
 
-    # Detailed classification report
-    print("\nClassification Report:")
+    print("\nClassification Summary:")
     print(
         classification_report(
             all_labels,
@@ -172,7 +171,6 @@ def evaluate_checkpoint(checkpoint_path, output_dir=None):
         print(f"\nConfusion matrix saved to: {output_path}")
         plt.close()
 
-        # ---- New: grouped bar chart for metrics by class ----
         metrics = {
             "Accuracy": class_accuracy,
             "Precision": precision_per_class.tolist(),
